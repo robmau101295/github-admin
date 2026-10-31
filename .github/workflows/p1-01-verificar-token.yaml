@@ -1,0 +1,37 @@
+# ============================================================
+# P1.1 - Verificar token
+# ------------------------------------------------------------
+#  [ ] Nombre "P1.1 - Verificar token", solo manual
+#  [ ] Job "verificar":
+#      [ ] 1. con ADMIN_TOKEN: "Autenticado como: <usuario>"
+#             (gh api user, token por env GH_TOKEN)
+#      [ ] 2. con GITHUB_TOKEN: lo mismo -> falla SIN tumbar el job
+#
+# Preguntas de cierre:
+#  1. ¿Por qué GITHUB_TOKEN no sirve para crear repos?
+#  2. ¿Por qué el PAT necesita "All repositories"?
+#  3. ¿Qué harías si el PAT se filtra?
+# ============================================================
+
+name: "P1.1 - Verificar token"
+
+on: workflow_dispatch
+
+jobs:
+  verificar:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.ADMIN_TOKEN }}
+    steps:
+      - name: "Autenticacion"
+        run: |
+          USUARIO=$(gh api user --jq '.login')
+          echo "Autenticado como: $USUARIO"
+
+      - name: "Con GITHUB_TOKEN (debe fallar)"
+        continue-on-error: true                       # si falla, el job sigue verde
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}       # token automático, solo sirve para este repo
+        run: |
+          USUARIO=$(gh api user --jq '.login')
+          echo "Autenticado como: $USUARIO"
