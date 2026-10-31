@@ -1,0 +1,68 @@
+# ============================================================
+# P1.2 - Crear repo con inputs
+# ------------------------------------------------------------
+#  [ ] Nombre "P1.2 - Crear repo", manual con inputs:
+#      [ ] nombre       (string, obligatorio)
+#      [ ] descripcion  (string, default "Repo creado por github-admin")
+#      [ ] visibilidad  (choice: public/private, default public)
+#      [ ] con_readme   (boolean, default true)
+#  [ ] Job "crear":
+#      [ ] 1. resumen de los 4 valores (por env)
+#      [ ] 2. gh repo create con ADMIN_TOKEN
+#      [ ] 3. imprimir URL del repo creado
+#
+# Preguntas de cierre:
+#  1. ¿Por qué los inputs pasan por env?
+#  2. ¿Qué pasa si lo corres 2 veces con el mismo nombre?
+#  3. ¿Por qué visibilidad es choice y no string?
+# ============================================================
+
+name: "P1.2 - Crear repo"
+
+on:
+  workflow_dispatch:
+    inputs:
+      nombre:
+        description: "Nombre del Repo"
+        required: true
+        type: string
+      descripcion:
+        type: string
+        default: "Repo creado por github-admin"
+      visibilidad:
+        type: choice
+        options: 
+          - public
+          - private
+        default: public
+      con_readme:
+        type: boolean
+        default: true
+
+jobs:
+  crear:
+    runs-on: ubuntu-latest
+    env:
+      NOMBRE: ${{ inputs.nombre }}
+      DESCRIPCION: ${{ inputs.descripcion }}
+      VISIBILIDAD: ${{ inputs.visibilidad }}
+      CON_README: ${{ inputs.con_readme && '--add-readme' || '' }}
+      GH_TOKEN: ${{ secrets.ADMIN_TOKEN }}
+    steps:
+      - name: "Parametros: "
+        run: |
+          echo "NOMBRE: $NOMBRE"
+          echo "DESCRIPCION: $DESCRIPCION"
+          echo "VISIBILIDAD: $VISIBILIDAD"
+          echo "CON_README: $CON_README"
+
+      - name: "Crear repo"          
+        run: |
+          gh repo create $NOMBRE --$VISIBILIDAD --description "$DESCRIPCION" $CON_README
+
+      - name: "Imprimir url"          
+        run: |
+          gh repo view $NOMBRE --json url --jq '.url'
+          
+
+      
