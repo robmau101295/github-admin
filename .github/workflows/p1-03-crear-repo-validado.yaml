@@ -1,0 +1,104 @@
+# ============================================================
+# P1.3 - Crear repo validado
+# ------------------------------------------------------------
+#  [ ] Nombre "P1.3 - Crear repo validado"
+#  [ ] Mover el env para que lo vean los 2 jobs
+#  [ ] Job "validar" (antes de crear):
+#      [ ] Nombre no cumple ^ms-[a-z0-9-]+$ -> ::error:: + exit 1
+#      [ ] Nombre > 40 caracteres          -> ::error:: + exit 1
+#      [ ] Si pasa todo                     -> ::notice:: válido
+#  [ ] Job "crear": solo si "validar" salió bien (needs)
+#  [ ] Último step de "crear": tabla en $GITHUB_STEP_SUMMARY
+#      con nombre, visibilidad y URL
+#
+# Herramientas:
+#   [[ "$VAR" =~ ^patron$ ]]      comparar con patrón
+#   ${#VAR}  y  -gt 40            largo del texto
+#   echo "::error title=X::msg"   anotación de error
+#   exit 1                        fallar el step
+#   needs: validar                ordenar jobs
+#   >> "$GITHUB_STEP_SUMMARY"     escribir el resumen
+#
+# Predicciones (llenar ANTES de probar):
+#   repo-prueba   ->
+#   MS-Pagos      ->
+#   ms-pagos_api  ->
+#   ms-pagos      ->
+#
+# Preguntas de cierre:
+#  1. ¿Por qué validar en un job aparte y no en un step de crear?
+#  2. ¿Qué pasa si quitas el $ del final del patrón?
+#  3. ¿Dónde ves los ::error:: además del log?
+# ============================================================
+name: "P1.3 - Crear repo validado"
+
+on:
+  workflow_dispatch:
+    inputs:
+      nombre:
+        description: "Nombre del Repo"
+        required: true
+        type: string
+      descripcion:
+        type: string
+        default: "Repo creado por github-admin"
+      visibilidad:
+        type: choice
+        options: 
+          - public
+          - private
+        default: public
+      con_readme:
+        type: boolean
+        default: true
+env:
+  NOMBRE: ${{ inputs.nombre }}
+  DESCRIPCION: ${{ inputs.descripcion }}
+  VISIBILIDAD: ${{ inputs.visibilidad }}
+  CON_README: ${{ inputs.con_readme && '--add-readme' || '' }}
+  GH_TOKEN: ${{ secrets.ADMIN_TOKEN }}
+
+jobs:
+  validar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Validar formato"
+        run: |
+          if [[ ! "$NOMBRE" =~ ^ms-[a-z0-9-]+$ ]]; then
+            echo "::error title=Nombre inválido::'$NOMBRE' debe empezar con ms- y usar solo minúsculas, números y guiones"
+            exit 1
+          fi
+
+      - name: "Validar tamaño"
+        run: |
+          if [ ${#NOMBRE} -gt 40 ]; then
+            echo "::error title=Nombre muy largo::'$NOMBRE' tiene ${#NOMBRE} caracteres (máximo 40)"
+            exit 1
+          fi
+
+      - name: "Aprobado"
+        run: |
+          echo "::notice title=Nombre válido::'$NOMBRE' cumple la convención"
+          
+  crear:
+    needs: validar
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: "Parametros: "
+        run: |
+          echo "NOMBRE: $NOMBRE"
+          echo "DESCRIPCION: $DESCRIPCION"
+          echo "VISIBILIDAD: $VISIBILIDAD"
+          echo "CON_README: $CON_README"
+
+      - name: "Crear repo"          
+        run: |
+          gh repo create $NOMBRE --$VISIBILIDAD --description "$DESCRIPCION" $CON_README
+
+      - name: "Imprimir url"          
+        run: |
+          gh repo view $NOMBRE --json url --jq '.url'
+          
+
+      
