@@ -69,7 +69,7 @@ jobs:
         uses: ./.github/actions/validar     # 2. usa tu action
         with:
           nombre: ${{ inputs.nombre }}             # 3. le pasa el input del formulario
-          prefijo: "or"
+          prefijo: "or-"
           max_largo: "10"
 
           
