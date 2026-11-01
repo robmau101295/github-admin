@@ -43,6 +43,19 @@
   #  if: steps.<id>.outputs.<clave> == 'false'
   # ============================================================
 
+ # ============================================================
+  # P1.5 - Configuración estándar
+  #  [ ] input "equipo": choice pagos/usuarios/plataforma
+  #  [ ] step "Configurar estándar" (SIEMPRE, sin if):
+  #      gh repo edit con: delete-branch-on-merge, sin wiki,
+  #      sin projects, solo squash, topics microservicio +
+  #      equipo-<x>
+  #  [ ] step "Verificar configuración": gh repo view --json
+  #  [ ] resumen: fila Equipo
+  #
+  #  Pruebas: or-cami -> activar wiki a mano -> correr de nuevo
+  # ============================================================
+
 name: "P1.3 - Crear repo validado"
 
 on:
@@ -64,24 +77,31 @@ on:
       con_readme:
         type: boolean
         default: true
+      equipo:
+        type: choice
+        options:
+          - pagos
+          - usuarios
+          - plataforma
 env:
   NOMBRE: ${{ inputs.nombre }}
+  REPO: ${{ github.repository_owner }}/${{ inputs.nombre }}
+  EQUIPO: ${{ inputs.equipo }}
   DESCRIPCION: ${{ inputs.descripcion }}
   VISIBILIDAD: ${{ inputs.visibilidad }}
   CON_README: ${{ inputs.con_readme && '--add-readme' || '' }}
-  GH_TOKEN: ${{ secrets.ADMIN_TOKEN }}
 
 jobs:
   validar:
     runs-on: ubuntu-latest
     steps:
       - name: "Checkout"
-        uses: actions/checkout@v7                  # 1. baja el repo (incluida tu action)
+        uses: actions/checkout@v7                
 
       - name: "Validar nombre"
-        uses: ./.github/actions/validar     # 2. usa tu action
+        uses: ./.github/actions/validar  
         with:
-          nombre: ${{ inputs.nombre }}             # 3. le pasa el input del formulario
+          nombre: ${{ inputs.nombre }}        
           prefijo: "or-"
           max_largo: "10"  
           
@@ -94,7 +114,7 @@ jobs:
       - name: "Verificar si existe"
         id: check
         run: |
-          if gh repo view "$NOMBRE" > /dev/null 2>&1; then
+          if gh repo view "$REPO" > /dev/null 2>&1; then
             echo "::notice title=Repo existente::'$NOMBRE' ya existe, se omite la creación"
             echo "existe=true" >> "$GITHUB_OUTPUT"
           else
@@ -104,23 +124,34 @@ jobs:
       - name: "Crear repo"  
         if: steps.check.outputs.existe == 'false'        
         run: |
-          gh repo create $NOMBRE --$VISIBILIDAD --description "$DESCRIPCION" $CON_README
+          gh repo create $REPO --$VISIBILIDAD --description "$DESCRIPCION" $CON_README
 
-      - name: "Imprimir url"          
+      - name: "Configurar estándar"
         run: |
-          gh repo view $NOMBRE --json url --jq '.url'
+          gh repo edit "$REPO" \
+            --delete-branch-on-merge \
+            --enable-wiki=false \
+            --enable-projects=false \
+            --enable-squash-merge \
+            --enable-merge-commit=false \
+            --enable-rebase-merge=false \
+            --add-topic microservicio \
+            --add-topic "equipo-$EQUIPO"
+
+      - name: "Verificar configuracion"
+        run: |
+          gh repo view "$REPO" \
+            --json deleteBranchOnMerge,hasWikiEnabled,hasProjectsEnabled,squashMergeAllowed,mergeCommitAllowed,rebaseMergeAllowed,repositoryTopics
 
       - name: "Resumen"
         env:
           ESTADO: ${{ steps.check.outputs.existe == 'false' && 'CREADO!' || 'YA EXISTIA!'}}                         # ← tu parte
         run: |
-          URL=$(gh repo view "$NOMBRE" --json url --jq '.url')
+          URL=$(gh repo view "$REPO" --json url --jq '.url')
           echo "## Repo" >> "$GITHUB_STEP_SUMMARY"
           echo "| Campo | Valor |" >> "$GITHUB_STEP_SUMMARY"
           echo "|---|---|" >> "$GITHUB_STEP_SUMMARY"
           echo "| Nombre | $NOMBRE |" >> "$GITHUB_STEP_SUMMARY"
           echo "| Estado | $ESTADO |" >> "$GITHUB_STEP_SUMMARY"
           echo "| URL | $URL |" >> "$GITHUB_STEP_SUMMARY"
-          
-
-      
+          echo "| Equipo | $EQUIPO |" >> "$GITHUB_STEP_SUMMARY"
