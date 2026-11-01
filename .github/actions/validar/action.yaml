@@ -37,7 +37,7 @@ runs:
         PREFIJO: ${{ inputs.prefijo }}
       run: |
         if [[ ! "$NOMBRE" =~ ^${PREFIJO}[a-z0-9-]+$ ]]; then
-          echo "::error title=Nombre inválido::'$NOMBRE' debe empezar con ms- y usar solo minúsculas, números y guiones"
+          echo "::error title=Nombre inválido::'$NOMBRE' debe empezar con ${PREFIJO} y usar solo minúsculas, números y guiones"
           exit 1
         fi
 
@@ -48,7 +48,7 @@ runs:
         MAX_LARGO: ${{ inputs.max_largo }}
       run: |
         if [ ${#NOMBRE} -gt ${MAX_LARGO} ]; then
-          echo "::error title=Nombre muy largo::'$NOMBRE' tiene ${#NOMBRE} caracteres (máximo 40)"
+          echo "::error title=Nombre muy largo::'$NOMBRE' tiene ${#NOMBRE} caracteres (máximo ${MAX_LARGO})"
           exit 1
         fi
 

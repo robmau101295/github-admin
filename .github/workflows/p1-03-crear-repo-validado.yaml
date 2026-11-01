@@ -30,6 +30,19 @@
 #  2. ¿Qué pasa si quitas el $ del final del patrón?
 #  3. ¿Dónde ves los ::error:: además del log?
 # ============================================================
+
+  # ============================================================
+  # P1.4 - Idempotencia
+  #  [ ] step "verificar" con id: output existe=true/false
+  #      (+ ::notice:: si ya existe)
+  #  [ ] "Crear repo" solo si existe == 'false'
+  #  [ ] resumen: fila Estado -> Creado / Ya existía
+  #
+  #  gh repo view "$NOMBRE" > /dev/null 2>&1   -> 0 si existe
+  #  echo "clave=valor" >> "$GITHUB_OUTPUT"
+  #  if: steps.<id>.outputs.<clave> == 'false'
+  # ============================================================
+
 name: "P1.3 - Crear repo validado"
 
 on:
@@ -69,29 +82,45 @@ jobs:
         uses: ./.github/actions/validar     # 2. usa tu action
         with:
           nombre: ${{ inputs.nombre }}             # 3. le pasa el input del formulario
-          prefijo: "or"
-          max_largo: "10"
-
+          prefijo: "or-"
+          max_largo: "10"  
           
   crear:
     needs: validar
     runs-on: ubuntu-latest
-
+    env:
+      GH_TOKEN: ${{ secrets.ADMIN_TOKEN }}
     steps:
-      - name: "Parametros: "
+      - name: "Verificar si existe"
+        id: check
         run: |
-          echo "NOMBRE: $NOMBRE"
-          echo "DESCRIPCION: $DESCRIPCION"
-          echo "VISIBILIDAD: $VISIBILIDAD"
-          echo "CON_README: $CON_README"
+          if gh repo view "$NOMBRE" > /dev/null 2>&1; then
+            echo "::notice title=Repo existente::'$NOMBRE' ya existe, se omite la creación"
+            echo "existe=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "existe=false" >> "$GITHUB_OUTPUT"
+          fi
 
-      - name: "Crear repo"          
+      - name: "Crear repo"  
+        if: steps.check.outputs.existe == 'false'        
         run: |
           gh repo create $NOMBRE --$VISIBILIDAD --description "$DESCRIPCION" $CON_README
 
       - name: "Imprimir url"          
         run: |
           gh repo view $NOMBRE --json url --jq '.url'
+
+      - name: "Resumen"
+        env:
+          ESTADO: ${{ steps.check.outputs.existe == 'false' && 'CREADO!' || 'YA EXISTIA!'}}                         # ← tu parte
+        run: |
+          URL=$(gh repo view "$NOMBRE" --json url --jq '.url')
+          echo "## Repo" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Campo | Valor |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|---|---|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Nombre | $NOMBRE |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Estado | $ESTADO |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| URL | $URL |" >> "$GITHUB_STEP_SUMMARY"
           
 
       
