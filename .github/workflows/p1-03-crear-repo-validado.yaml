@@ -85,6 +85,7 @@ on:
           - plataforma
 env:
   NOMBRE: ${{ inputs.nombre }}
+  REPO: ${{ github.repository_owner }}/${{ inputs.nombre }}
   EQUIPO: ${{ inputs.equipo }}
   DESCRIPCION: ${{ inputs.descripcion }}
   VISIBILIDAD: ${{ inputs.visibilidad }}
@@ -113,7 +114,7 @@ jobs:
       - name: "Verificar si existe"
         id: check
         run: |
-          if gh repo view "$NOMBRE" > /dev/null 2>&1; then
+          if gh repo view "$REPO" > /dev/null 2>&1; then
             echo "::notice title=Repo existente::'$NOMBRE' ya existe, se omite la creación"
             echo "existe=true" >> "$GITHUB_OUTPUT"
           else
@@ -123,11 +124,11 @@ jobs:
       - name: "Crear repo"  
         if: steps.check.outputs.existe == 'false'        
         run: |
-          gh repo create $NOMBRE --$VISIBILIDAD --description "$DESCRIPCION" $CON_README
+          gh repo create $REPO --$VISIBILIDAD --description "$DESCRIPCION" $CON_README
 
       - name: "Configurar estándar"
         run: |
-          gh repo edit "$NOMBRE" \
+          gh repo edit "$REPO" \
             --delete-branch-on-merge \
             --enable-wiki=false \
             --enable-projects=false \
@@ -139,14 +140,14 @@ jobs:
 
       - name: "Verificar configuracion"
         run: |
-          gh repo view "$NOMBRE" \
+          gh repo view "$REPO" \
             --json deleteBranchOnMerge,hasWikiEnabled,hasProjectsEnabled,squashMergeAllowed,mergeCommitAllowed,rebaseMergeAllowed,repositoryTopics
 
       - name: "Resumen"
         env:
           ESTADO: ${{ steps.check.outputs.existe == 'false' && 'CREADO!' || 'YA EXISTIA!'}}                         # ← tu parte
         run: |
-          URL=$(gh repo view "$NOMBRE" --json url --jq '.url')
+          URL=$(gh repo view "$REPO" --json url --jq '.url')
           echo "## Repo" >> "$GITHUB_STEP_SUMMARY"
           echo "| Campo | Valor |" >> "$GITHUB_STEP_SUMMARY"
           echo "|---|---|" >> "$GITHUB_STEP_SUMMARY"
