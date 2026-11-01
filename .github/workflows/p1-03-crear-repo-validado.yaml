@@ -62,23 +62,16 @@ jobs:
   validar:
     runs-on: ubuntu-latest
     steps:
-      - name: "Validar formato"
-        run: |
-          if [[ ! "$NOMBRE" =~ ^ms-[a-z0-9-]+$ ]]; then
-            echo "::error title=Nombre inválido::'$NOMBRE' debe empezar con ms- y usar solo minúsculas, números y guiones"
-            exit 1
-          fi
+      - name: "Checkout"
+        uses: actions/checkout@v7                  # 1. baja el repo (incluida tu action)
 
-      - name: "Validar tamaño"
-        run: |
-          if [ ${#NOMBRE} -gt 40 ]; then
-            echo "::error title=Nombre muy largo::'$NOMBRE' tiene ${#NOMBRE} caracteres (máximo 40)"
-            exit 1
-          fi
+      - name: "Validar nombre"
+        uses: ./.github/actions/validar     # 2. usa tu action
+        with:
+          nombre: ${{ inputs.nombre }}             # 3. le pasa el input del formulario
+          prefijo: "or"
+          max_largo: "10"
 
-      - name: "Aprobado"
-        run: |
-          echo "::notice title=Nombre válido::'$NOMBRE' cumple la convención"
           
   crear:
     needs: validar

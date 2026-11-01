@@ -1,0 +1,58 @@
+# ============================================================
+# Action: validar-nombre
+# ------------------------------------------------------------
+#  [ ] name + description
+#  [ ] inputs: nombre (obligatorio), prefijo (default ms-),
+#              max_largo (default 40)
+#  [ ] runs: composite
+#  [ ] 3 steps de P1.3 con:
+#      [ ] shell: bash
+#      [ ] inputs por env
+#      [ ] usar PREFIJO y MAX_LARGO (no valores fijos)
+# ============================================================
+
+name: "validar-nombre"
+description: "Validar el nombre del repositorio que va a ser creado."
+
+inputs:
+  nombre: 
+    description: "Nombre del repositorio"
+    required: true
+  prefijo:
+    description: "Prefijo del repositorio"
+    required: false
+    default: "ms-"
+  max_largo:
+    description: "Tamaño nombre"
+    required: false
+    default: "20"
+
+runs:
+  using: "composite"
+  steps:
+    - name: "Validar formato"
+      shell: bash
+      env:
+        NOMBRE: ${{ inputs.nombre }}
+        PREFIJO: ${{ inputs.prefijo }}
+      run: |
+        if [[ ! "$NOMBRE" =~ ^${PREFIJO}[a-z0-9-]+$ ]]; then
+          echo "::error title=Nombre inválido::'$NOMBRE' debe empezar con ms- y usar solo minúsculas, números y guiones"
+          exit 1
+        fi
+
+    - name: "Validar tamaño"
+      shell: bash
+      env:
+        NOMBRE: ${{ inputs.nombre }}
+        MAX_LARGO: ${{ inputs.max_largo }}
+      run: |
+        if [ ${#NOMBRE} -gt ${MAX_LARGO} ]; then
+          echo "::error title=Nombre muy largo::'$NOMBRE' tiene ${#NOMBRE} caracteres (máximo 40)"
+          exit 1
+        fi
+
+    - name: "Aprobado"
+      shell: bash
+      run: |
+        echo "::notice title=Nombre válido::'$NOMBRE' cumple la convención"
